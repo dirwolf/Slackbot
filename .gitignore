@@ -1,0 +1,9 @@
+node_modules
+.env
+
+
+<!-- The .gitignore file is used in Git repositories to specify which files and directories Git should ignore when tracking changes. This is important because there are certain files that you don't want to include in version control -->
+
+<!-- Configuration files with sensitive data: Files that may contain private information, such as API keys, passwords, or credentials (e.g., .env files or configuration files with secrets). -->
+
+<!-- IDE and editor settings: Many development environments generate configuration files specific to the user’s machine (e.g., .vscode/, .idea/). These files are often not necessary for other collaborators or the project itself. -->
