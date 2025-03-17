@@ -86,33 +86,31 @@ const voteSchema = new mongoose.Schema({
 });
 const Vote = mongoose.model('Vote', voteSchema);
 
-// Define poll options
+// / Define Poll Options with Buttons
 const blocks = [
+    {
+        "type": "section",
+        "text": { "type": "mrkdwn", "text": "🍽️ *Food Poll!* What do you want to eat?" }
+    },
     {
         "type": "actions",
         "elements": [
-            {
-                "type": "radio_buttons",
-                "options": [
-                    { "text": { "type": "plain_text", "text": "🍕 Pizza", "emoji": true }, "value": "pizza" },
-                    { "text": { "type": "plain_text", "text": "🍛 South Indian", "emoji": true }, "value": "south_indian" },
-                    { "text": { "type": "plain_text", "text": "🥗 Veg Thaali", "emoji": true }, "value": "veg_thaali" },
-                    { "text": { "type": "plain_text", "text": "🍗 Non-Veg Biryani", "emoji": true }, "value": "non_veg_biryani" },
-                    { "text": { "type": "plain_text", "text": "🥡 Chinese", "emoji": true }, "value": "chinese" }
-                ],
-                "action_id": "food_poll"
-            }
+            { "type": "button", "text": { "type": "plain_text", "text": "🍕 Pizza" }, "value": "pizza", "action_id": "vote_pizza" },
+            { "type": "button", "text": { "type": "plain_text", "text": "🍛 South Indian" }, "value": "south_indian", "action_id": "vote_south_indian" },
+            { "type": "button", "text": { "type": "plain_text", "text": "🥗 Veg Thaali" }, "value": "veg_thaali", "action_id": "vote_veg_thaali" },
+            { "type": "button", "text": { "type": "plain_text", "text": "🍗 Non-Veg Biryani" }, "value": "non_veg_biryani", "action_id": "vote_non_veg_biryani" },
+            { "type": "button", "text": { "type": "plain_text", "text": "🥡 Chinese" }, "value": "chinese", "action_id": "vote_chinese" }
         ]
     }
 ];
 
-// Function to send the poll to Slack channel
+// Function to Send Poll to Slack Channel
 async function sendPoll() {
     try {
-        await app.client.chat.postMessage({
+        const result = await app.client.chat.postMessage({
             token: process.env.SLACK_BOT_TOKEN,
             channel: process.env.SLACK_CHANNEL,
-            text: "🍽️ *Food Poll!* What do you want to eat?",
+            text: "🍽️ *Food Poll!* Vote for your favorite food!",
             blocks: blocks
         });
         console.log("✅ Poll sent successfully!");
@@ -121,41 +119,36 @@ async function sendPoll() {
     }
 }
 
-// Handle poll responses
-// app.action("food_poll", async ({ body, ack, respond, client }) => {
-//     await ack(); // Acknowledge the action
+// Function to Handle Votes
+app.action(/vote_.*/, async ({ body, ack, respond, client }) => {
+    await ack(); // Acknowledge the action
     
-//     const selectedOption = body.actions[0].selected_option.value;
-//     const user_id = body.user.id;
-    
-//     try {
-//         // Fetch user details from Slack API
-//         const userInfo = await client.users.info({ user: user_id });
-//         const user_name = userInfo.user.real_name || userInfo.user.name;
+    const selectedOption = body.actions[0].value;
+    const user_id = body.user.id;
 
-//         // Save vote in MongoDB
-//         await Vote.create({ user_id, user_name, choice: selectedOption });
-        
-//         console.log(`✅ Stored: ${user_name} (${user_id}) voted for ${selectedOption}`);
+    try {
+        // Fetch user details from Slack API
+        const userInfo = await client.users.info({ user: user_id });
+        const user_name = userInfo.user.real_name || userInfo.user.name;
 
-//         // Confirm vote to user
-//         await respond(`✅ <@${user_id}>, your vote for *${selectedOption}* has been recorded!`);
-//     } catch (error) {
-//         console.error("❌ Error storing vote:", error);
-//         await respond("⚠️ An error occurred while recording your vote.");
-//     }
-// });
+        console.log(`🔹 Saving vote: ${user_name} (${user_id}) -> ${selectedOption}`);
 
-// Start bot and send poll
+        // Save vote in MongoDB
+        const vote = new Vote({ user_id, user_name, choice: selectedOption });
+        await vote.save(); // <-- Check if this line throws an error
+
+        console.log(`✅ Vote stored successfully.`);
+        await respond(`✅ <@${user_id}>, your vote for *${selectedOption}* has been recorded!`);
+    } catch (error) {
+        console.error("❌ MongoDB Save Error:", error);  // <-- This will print the actual error
+        await respond("⚠️ An error occurred while recording your vote.");
+    }
+});
+
+
+// Start Bot & Send Poll
 (async () => {
     await app.start(process.env.PORT || 3000);
     console.log(`🚀 Slack bot running on port ${process.env.PORT || 3000}`);
     await sendPoll();
 })();
-
-
-// // Start Slack Bot
-// (async () => {
-//     await app.start(process.env.PORT || 3000);
-//     console.log(`🚀 Bot app is running on port ${process.env.PORT || 3000}!`);
-// })();
